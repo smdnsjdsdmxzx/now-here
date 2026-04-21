@@ -1,32 +1,32 @@
+require("dotenv").config({
+  path: require("path").resolve(__dirname, "../.env"),
+});
+
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 
-const postRoutes = require("./routes/postRoutes");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
 app.use(cors());
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json());
 
-// 🔥 BURASI KRİTİK
-const startServer = async () => {
-  try {
-    await mongoose.connect(
-      "mongodb+srv://Ahmethan:13579Ahmethan@cluster0.zflftof.mongodb.net/nowhere"
-    );
+// DB
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("DB bağlandı"))
+  .catch((err) => console.log("DB hata:", err));
 
-    console.log("MongoDB bağlandı ✅");
+// ROUTES
+app.use("/api/auth", authRoutes);
 
-    // ROUTES SADECE BAĞLANDIKTAN SONRA
-    app.use("/api/posts", postRoutes);
+app.get("/", (req, res) => {
+  res.send("API çalışıyor 🚀");
+});
 
-    app.listen(5000, () => {
-      console.log("Server çalışıyor: http://localhost:5000");
-    });
-  } catch (err) {
-    console.error("DB bağlantı hatası ❌", err.message);
-  }
-};
+const PORT = 5000;
 
-startServer();
+app.listen(PORT, () => {
+  console.log("Server çalışıyor:", PORT);
+});
