@@ -3,12 +3,26 @@ const mongoose = require("mongoose");
 const Post = require("../models/Post");
 const { memoryPosts } = require("../data/memoryStore");
 
+const validCategories = new Set(["genel", "diger", "kafe", "doga", "etkinlik", "spor", "sanat", "yemek", "alisveris"]);
+const validMoods = new Set(["calm", "social", "focus", "energy", "view"]);
+
 function usesDatabase() {
   return mongoose.connection.readyState === 1;
 }
 
 function createId() {
   return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+}
+
+function normalizeTags(tags) {
+  const source = Array.isArray(tags) ? tags : String(tags || "").split(",");
+  return Array.from(
+    new Set(
+      source
+        .map((tag) => String(tag).trim().replace(/^#/, "").toLowerCase())
+        .filter(Boolean)
+    )
+  ).slice(0, 6);
 }
 
 function normalizePost(post, viewerId = "") {
@@ -26,6 +40,9 @@ function normalizePost(post, viewerId = "") {
     placeName: source.placeName || "Konum",
     image: source.image || "",
     category: source.category || "genel",
+    mood: source.mood || "calm",
+    rating: Number(source.rating) || 0,
+    tags: normalizeTags(source.tags),
     likes: Number(source.likes) || likedBy.length || 0,
     likedBy,
     viewerLiked: viewerId ? likedBy.includes(viewerId) : false,
@@ -35,7 +52,7 @@ function normalizePost(post, viewerId = "") {
   };
 }
 
-function validatePostInput({ description = "", image = "", lat, lng }) {
+function validatePostInput({ description = "", image = "", lat, lng, tags = [] }) {
   const numericLat = Number(lat);
   const numericLng = Number(lng);
 
@@ -45,6 +62,10 @@ function validatePostInput({ description = "", image = "", lat, lng }) {
 
   if (description.length > 500) {
     return "Aciklama 500 karakterden uzun olamaz.";
+  }
+
+  if (normalizeTags(tags).join(",").length > 120) {
+    return "Etiketler cok uzun.";
   }
 
   if (
@@ -61,14 +82,42 @@ function validatePostInput({ description = "", image = "", lat, lng }) {
   return null;
 }
 
+function filterPosts(posts, req) {
+  const category = String(req.query.category || "").trim();
+  const q = String(req.query.q || "").trim().toLowerCase();
+
+  return posts.filter((post) => {
+    if (category && category !== "all" && post.category !== category) return false;
+    if (!q) return true;
+
+    const haystack = [
+      post.placeName,
+      post.description,
+      post.authorName,
+      post.category,
+      post.mood,
+      ...(post.tags || []),
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return haystack.includes(q);
+  });
+}
+
 exports.getPosts = async (req, res) => {
   try {
     if (!usesDatabase()) {
-      return res.json(memoryPosts.map((post) => normalizePost(post, req.user?.id)).sort(sortNewest));
+      const posts = memoryPosts.map((post) => normalizePost(post, req.user?.id)).sort(sortNewest);
+      return res.json(filterPosts(posts, req));
     }
 
-    const posts = await Post.find().sort({ createdAt: -1 });
-    return res.json(posts.map((post) => normalizePost(post, req.user?.id)));
+    const mongoFilter = {};
+    const category = String(req.query.category || "").trim();
+    if (category && category !== "all" && validCategories.has(category)) mongoFilter.category = category;
+
+    const posts = await Post.find(mongoFilter).sort({ createdAt: -1 });
+    return res.json(filterPosts(posts.map((post) => normalizePost(post, req.user?.id)), req));
   } catch (err) {
     console.error("getPosts hata:", err);
     return res.status(500).json({ message: "Postlar alinamadi" });
@@ -84,9 +133,12 @@ exports.createPost = async (req, res) => {
       placeName = "Konum",
       image = "",
       category = "genel",
+      mood = "calm",
+      rating = 0,
+      tags = [],
     } = req.body;
 
-    const validationError = validatePostInput({ description, image, lat, lng });
+    const validationError = validatePostInput({ description, image, lat, lng, tags });
     if (validationError) {
       return res.status(400).json({ message: validationError });
     }
@@ -98,9 +150,12 @@ exports.createPost = async (req, res) => {
       description: description.trim(),
       lat: Number(lat),
       lng: Number(lng),
-      placeName: placeName.trim() || "Konum",
+      placeName: String(placeName).trim() || "Konum",
       image,
-      category,
+      category: validCategories.has(category) ? category : "genel",
+      mood: validMoods.has(mood) ? mood : "calm",
+      rating: Math.max(0, Math.min(5, Number(rating) || 0)),
+      tags: normalizeTags(tags),
       likedBy: [],
       likes: 0,
       comments: [],
@@ -194,6 +249,31 @@ exports.commentPost = async (req, res) => {
   } catch (err) {
     console.error("commentPost hata:", err);
     return res.status(500).json({ message: "Yorum eklenemedi" });
+  }
+};
+
+exports.deletePost = async (req, res) => {
+  try {
+    if (!usesDatabase()) {
+      const index = memoryPosts.findIndex((item) => item._id === req.params.id);
+      if (index === -1) return res.status(404).json({ message: "Post bulunamadi" });
+      if (memoryPosts[index].authorId !== req.user.id) {
+        return res.status(403).json({ message: "Bu postu silme yetkin yok." });
+      }
+      memoryPosts.splice(index, 1);
+      return res.json({ ok: true });
+    }
+
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: "Post bulunamadi" });
+    if (post.authorId !== req.user.id) {
+      return res.status(403).json({ message: "Bu postu silme yetkin yok." });
+    }
+    await post.deleteOne();
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("deletePost hata:", err);
+    return res.status(500).json({ message: "Post silinemedi" });
   }
 };
 

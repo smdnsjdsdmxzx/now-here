@@ -1,4 +1,8 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  ""
+).replace(/\/$/, "");
 const LOCAL_POSTS_KEY = "now-here-local-posts";
 const LEGACY_LOCAL_USERS_KEY = "now-here-local-users";
 const MAX_AUTH_TOKEN_LENGTH = 2800;
@@ -14,6 +18,9 @@ const demoPosts = [
     placeName: "Galata",
     image: "",
     category: "doga",
+    mood: "calm",
+    rating: 4,
+    tags: ["manzara", "yuruyus"],
     likes: 12,
     likedBy: [],
     comments: [],
@@ -29,6 +36,9 @@ const demoPosts = [
     placeName: "Kadikoy",
     image: "",
     category: "kafe",
+    mood: "social",
+    rating: 5,
+    tags: ["kahve", "sahil"],
     likes: 8,
     likedBy: [],
     comments: [],
@@ -40,8 +50,7 @@ export function sanitizeStoredSession() {
   const token = localStorage.getItem("token") || "";
 
   if (token.length > MAX_AUTH_TOKEN_LENGTH) {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearStoredSession();
     return "";
   }
 
@@ -53,23 +62,33 @@ function clearStoredSession() {
   localStorage.removeItem("user");
 }
 
+function buildUrl(path) {
+  if (/^https?:\/\//i.test(path)) return path;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE_URL}${normalizedPath}`;
+}
+
 async function request(path, options = {}) {
   const { skipAuth = false, ...fetchOptions } = options;
   const token = skipAuth ? "" : sanitizeStoredSession();
+  const headers = {
+    ...(fetchOptions.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...fetchOptions.headers,
+  };
+
   let response;
 
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(buildUrl(path), {
       ...fetchOptions,
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...fetchOptions.headers,
-      },
+      headers,
     });
   } catch {
     const error = new Error(
-      "API sunucusuna ulasilamadi. Server klasorunde npm install ve npm run dev calistigindan emin ol."
+      API_BASE_URL
+        ? "API sunucusuna ulasilamadi. Render servisinin aktif oldugunu kontrol et."
+        : "API adresi tanimli degil. Vercel icin VITE_API_BASE_URL degerini ekle."
     );
     error.isNetworkError = true;
     throw error;
@@ -78,7 +97,7 @@ async function request(path, options = {}) {
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    if (response.status === 431) {
+    if (response.status === 401 || response.status === 431) {
       clearStoredSession();
     }
 
@@ -216,9 +235,13 @@ export async function recordRouteDistance(meters) {
   });
 }
 
-export async function fetchPosts() {
+export async function fetchPosts(params = {}) {
   try {
-    const posts = await request("/api/posts");
+    const query = new URLSearchParams();
+    if (params.category && params.category !== "all") query.set("category", params.category);
+    if (params.q) query.set("q", params.q);
+    const endpoint = `/api/posts${query.toString() ? `?${query}` : ""}`;
+    const posts = await request(endpoint);
     return Array.isArray(posts) ? posts : [];
   } catch {
     return getLocalPosts();
@@ -297,6 +320,13 @@ export async function commentPost(postId, text) {
     setLocalPosts(nextPosts);
     return nextPosts.find((post) => post._id === postId);
   }
+}
+
+
+export async function deletePost(postId) {
+  return request(`/api/posts/${postId}`, {
+    method: "DELETE",
+  });
 }
 
 export async function searchPlaces(query) {

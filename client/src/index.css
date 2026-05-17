@@ -87,3 +87,27 @@ svg {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* Scroll governance: pages use the document scrollbar, app panels manage their own internal scroll only when needed. */
+html {
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-y: auto;
+}
+
+#root {
+  min-height: 100dvh;
+  isolation: isolate;
+}
+
+body:has(.map-page) {
+  overflow: hidden;
+}
+
+body:has(.home-page),
+body:has(.profile-page) {
+  overflow-y: auto;
+}

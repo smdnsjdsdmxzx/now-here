@@ -30,6 +30,13 @@ const categoryLabels = {
 };
 
 const categoryLegend = Object.entries(categoryLabels).filter(([key]) => key !== "diger");
+const moodLabels = {
+  calm: "Sakin",
+  social: "Sosyal",
+  focus: "Odak",
+  energy: "Enerjik",
+  view: "Manzara",
+};
 const MIN_TRACKED_ROUTE_METERS = 25;
 
 function formatDistance(meters) {
@@ -109,6 +116,8 @@ export default function MapPage() {
   const [regionQuery, setRegionQuery] = useState("");
   const [regionFilter, setRegionFilter] = useState(null);
   const [regionLoading, setRegionLoading] = useState(false);
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [feedQuery, setFeedQuery] = useState("");
   const [routeProgress, setRouteProgress] = useState({
     active: false,
     trackedMeters: 0,
@@ -128,20 +137,24 @@ export default function MapPage() {
   const visiblePosts = useMemo(() => {
     const regionText = normalizeText(regionFilter?.label);
     const regionBounds = regionFilter?.bounds;
+    const feedText = normalizeText(feedQuery);
 
     return sortedPosts.filter((post) => {
       const lat = Number(post.lat);
       const lng = Number(post.lng);
       if (!pointInsideBounds(lat, lng, mapBounds)) return false;
       if (regionBounds && !pointInsideBounds(lat, lng, regionBounds)) return false;
-      if (!regionText) return true;
+      if (activeCategory !== "all" && post.category !== activeCategory) return false;
 
       const haystack = normalizeText(
-        `${post.placeName || ""} ${post.description || ""} ${post.authorName || ""}`
+        `${post.placeName || ""} ${post.description || ""} ${post.authorName || ""} ${post.category || ""} ${post.mood || ""} ${(post.tags || []).join(" ")}`
       );
-      return haystack.includes(regionText) || Boolean(regionBounds);
+
+      if (regionText && !haystack.includes(regionText) && !regionBounds) return false;
+      if (feedText && !haystack.includes(feedText)) return false;
+      return true;
     });
-  }, [mapBounds, regionFilter, sortedPosts]);
+  }, [activeCategory, feedQuery, mapBounds, regionFilter, sortedPosts]);
 
   useEffect(() => {
     let alive = true;
@@ -541,6 +554,36 @@ export default function MapPage() {
           )}
         </form>
 
+        <div className="feed-filter-card" aria-label="Akis filtreleri">
+          <label htmlFor="feed-query-input">Akis icinde ara</label>
+          <input
+            id="feed-query-input"
+            value={feedQuery}
+            onChange={(event) => setFeedQuery(event.target.value)}
+            placeholder="Etiket, mekan, yazar veya atmosfer"
+          />
+          <div className="active-filter-row">
+            <button
+              type="button"
+              className={activeCategory === "all" ? "is-selected" : ""}
+              onClick={() => setActiveCategory("all")}
+            >
+              Tumu
+            </button>
+            {categoryLegend.map(([key, label]) => (
+              <button
+                type="button"
+                key={key}
+                className={activeCategory === key ? "is-selected" : ""}
+                onClick={() => setActiveCategory(key)}
+              >
+                <span className={`category-dot category-${key}`} />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="viewport-summary" aria-label="Gorunen alan ozeti">
           <span>Ekrandaki alan</span>
           <strong>{visiblePosts.length}</strong>
@@ -552,7 +595,8 @@ export default function MapPage() {
             <button
               type="button"
               key={key}
-              onClick={() => setNotice(`${label} kategorisindeki renk isaretleri haritada vurgulanir.`)}
+              onClick={() => setActiveCategory(activeCategory === key ? "all" : key)}
+              className={activeCategory === key ? "is-selected" : ""}
             >
               <span className={`category-dot category-${key}`} />
               {label}
@@ -586,9 +630,11 @@ export default function MapPage() {
                     <strong>{post.placeName || "Konum"}</strong>
                     <span>{post.description || "Fotografli paylasim"}</span>
                     <small>
-                      {categoryLabels[post.category] || "Genel"} - {post.likes || 0} begeni -{" "}
-                      {(post.comments || []).length} yorum
+                      {categoryLabels[post.category] || "Genel"} · {moodLabels[post.mood] || "Sakin"} · {post.rating || 0}/5 · {post.likes || 0} begeni · {(post.comments || []).length} yorum
                     </small>
+                    {!!post.tags?.length && (
+                      <small className="memory-tags">{post.tags.map((tag) => `#${tag}`).join(" ")}</small>
+                    )}
                   </span>
                 </button>
 

@@ -77,6 +77,23 @@ const PostSchema = new mongoose.Schema(
       type: String,
       enum: ["genel", "diger", "kafe", "doga", "etkinlik", "spor", "sanat", "yemek", "alisveris"],
       default: "genel",
+      index: true,
+    },
+    mood: {
+      type: String,
+      enum: ["calm", "social", "focus", "energy", "view"],
+      default: "calm",
+    },
+    rating: {
+      type: Number,
+      min: 0,
+      max: 5,
+      default: 0,
+    },
+    tags: {
+      type: [String],
+      default: [],
+      validate: [(value) => value.length <= 6, "En fazla 6 etiket eklenebilir."],
     },
     likes: {
       type: Number,
@@ -94,5 +111,8 @@ const PostSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+PostSchema.index({ createdAt: -1 });
+PostSchema.index({ placeName: "text", description: "text", tags: "text", authorName: "text" });
 
 module.exports = mongoose.model("Post", PostSchema);

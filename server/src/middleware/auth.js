@@ -55,7 +55,15 @@ function normalizeAuthUser(user) {
     avatarName: source.avatarName || source.username || "",
     email: source.email || "",
     profilePhoto: source.profilePhoto || "",
+    bio: source.bio || "",
+    city: source.city || "",
+    website: source.website || "",
+    statusText: source.statusText || "Kesifte",
+    interests: Array.isArray(source.interests) ? source.interests : [],
+    profileTheme: source.profileTheme || "lime",
     distanceMeters: Number(source.distanceMeters) || 0,
+    createdAt: source.createdAt,
+    updatedAt: source.updatedAt,
   };
 }
 

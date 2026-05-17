@@ -15,6 +15,14 @@ const categoryLabels = {
   alisveris: "Alisveris",
 };
 
+const moodLabels = {
+  calm: "Sakin",
+  social: "Sosyal",
+  focus: "Odak",
+  energy: "Enerjik",
+  view: "Manzara",
+};
+
 function createMarkerIcon(category = "genel", selected = false) {
   return L.divIcon({
     className: `memory-marker ${selected ? "is-selected" : ""}`,
@@ -186,7 +194,12 @@ function SinglePostMarker({ post, selected, onSelectPost, onRoute, onLike }) {
           <span className="popup-category">{categoryLabels[post.category] || "Genel"}</span>
           <strong>{post.placeName || "Konum"}</strong>
           <small>{post.authorName ? `${post.authorName} tarafindan` : "Paylasim"}</small>
+          <div className="popup-meta-line">
+            <span>{moodLabels[post.mood] || "Sakin"}</span>
+            <span>{post.rating || 0}/5</span>
+          </div>
           {post.description && <p>{post.description}</p>}
+          {!!post.tags?.length && <small className="popup-tags">{post.tags.map((tag) => `#${tag}`).join(" ")}</small>}
           {post.image && <img src={post.image} alt="Paylasim" />}
           <div className="popup-actions">
             <button type="button" onClick={() => onRoute(post)}>

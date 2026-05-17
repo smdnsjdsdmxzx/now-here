@@ -122,3 +122,56 @@
     padding: 22px 18px;
   }
 }
+
+/* Camera flip + mobile capture polish */
+.camera-video.is-selfie {
+  transform: scaleX(-1);
+}
+
+.camera-hud {
+  position: absolute;
+  top: calc(18px + var(--safe-top));
+  left: calc(16px + var(--safe-left));
+  right: calc(16px + var(--safe-right));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #f7f5ed;
+  pointer-events: none;
+}
+
+.camera-hud span,
+.camera-hud small {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 9px 12px;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(12px);
+  font-weight: 850;
+}
+
+.camera-hud small {
+  color: rgba(247, 245, 237, 0.72);
+  font-size: 12px;
+}
+
+.camera-switch:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+@media (max-width: 520px) {
+  .camera-hud {
+    display: grid;
+    justify-items: start;
+  }
+
+  .camera-controls {
+    justify-content: space-between;
+  }
+
+  .camera-secondary {
+    min-width: 78px;
+  }
+}

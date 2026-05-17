@@ -42,6 +42,40 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 220,
+      default: "",
+    },
+    city: {
+      type: String,
+      trim: true,
+      maxlength: 80,
+      default: "",
+    },
+    website: {
+      type: String,
+      trim: true,
+      maxlength: 140,
+      default: "",
+    },
+    statusText: {
+      type: String,
+      trim: true,
+      maxlength: 80,
+      default: "Kesifte",
+    },
+    interests: {
+      type: [String],
+      default: [],
+      validate: [(value) => value.length <= 8, "En fazla 8 ilgi alani eklenebilir."],
+    },
+    profileTheme: {
+      type: String,
+      enum: ["lime", "aqua", "amber", "violet"],
+      default: "lime",
+    },
     emailVerified: {
       type: Boolean,
       default: false,

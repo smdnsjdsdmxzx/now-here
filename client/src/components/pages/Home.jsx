@@ -4,8 +4,8 @@ import "./Home.css";
 
 const highlights = [
   { value: "canli", label: "Konum bazli anilar" },
-  { value: "hizli", label: "Tek dokunusla paylasim" },
-  { value: "rahat", label: "Mobil uyumlu harita" },
+  { value: "akilli", label: "Alan + kategori filtresi" },
+  { value: "mobil", label: "On/arka kamera destekli" },
 ];
 
 const previewStats = [
@@ -17,7 +17,7 @@ const previewStats = [
 const orbitStats = [
   { value: "GPS", label: "gercek rota takibi" },
   { value: "Alan", label: "ekrana gore paylasim" },
-  { value: "Rozet", label: "aktif profil gelisimi" },
+  { value: "Profil", label: "rozet, seviye, bio" },
   { value: "Akis", label: "canli yorum ve begeni" },
 ];
 
@@ -31,16 +31,33 @@ const featureCards = [
     text: "Sehir, ilce veya bolge arayip akisi aninda tek bir lokasyona daralt.",
   },
   {
+    title: "Mobil kamera",
+    text: "Telefonlarda on kamera ve arka kamera arasinda gecis yaparak post at.",
+  },
+  {
+    title: "Profil derinligi",
+    text: "Bio, sehir, ilgi alanlari, seviye, skor ve aktivite gecmisi tek profilde toplanir.",
+  },
+  {
+    title: "Etiketli postlar",
+    text: "Paylasimlara atmosfer, puan ve etiket ekleyerek daha anlamli sosyal harita olustur.",
+  },
+  {
     title: "Gercek mesafe",
     text: "Rota puani, sadece cihazdan algilanan hareketle profile islenir.",
   },
-  {
-    title: "Sosyal hafiza",
-    text: "Yorumlar, begeniler, rozetler ve paylasim gecmisi profilinde birikir.",
-  },
 ];
 
-const flowItems = ["Konumu ac", "Aniyi isaretle", "Yorumu yakala", "Rotayi tamamla"];
+const systemLayers = [
+  "Vercel frontend",
+  "Render API",
+  "MongoDB storage",
+  "OpenStreetMap arama",
+  "OSRM rota",
+  "JWT oturum",
+];
+
+const flowItems = ["Konumu ac", "Aniyi isaretle", "Kamerayi sec", "Etiket ekle", "Rotayi baslat", "Profili buyut"];
 const headlineWords = ["Explore", "the", "Next", "Evolution", "of", "NOW", "Here"];
 
 export default function Home() {
@@ -52,6 +69,12 @@ export default function Home() {
         <span className="zyra-orbit orbit-c" />
         <span className="zyra-halo" />
         <span className="zyra-horizon" />
+      </div>
+      <div className="home-depth-wall" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
       </div>
       <div className="home-kinetic-bg" aria-hidden="true">
         <span />
@@ -66,6 +89,7 @@ export default function Home() {
         <div className="center-nav" aria-label="Bolumler">
           <a href="#vision">Vision</a>
           <a href="#layers">Layers</a>
+          <a href="#system">System</a>
           <a href="#flow">Flow</a>
         </div>
         <div className="home-actions">
@@ -89,9 +113,9 @@ export default function Home() {
             ))}
           </h1>
           <p className="hero-text">
-            Bulundugun yeri fotograf, not ve kategoriyle isaretle. Sehirdeki
-            canli noktalar tek ekranda, hizli ve temiz bir harita deneyimiyle
-            onunde dursun.
+            Bulundugun yeri fotograf, not, kategori, atmosfer, puan ve etiketle isaretle.
+            Sehirdeki canli noktalar tek ekranda; akici animasyonlar, mobil kamera ve
+            genisletilmis profil sistemiyle sosyal haritaya donussun.
           </p>
           <div className="hero-buttons">
             <Link to="/map" className="primary-link">
@@ -113,11 +137,11 @@ export default function Home() {
             <div className="preview-route" />
             <div className="preview-card preview-card-one">
               <strong>Karakoy</strong>
-              <span>Kafe - 18 begeni</span>
+              <span>Kafe · #kahve · 18 begeni</span>
             </div>
             <div className="preview-card preview-card-two">
               <strong>Moda sahil</strong>
-              <span>Rota hazir - 12 dk</span>
+              <span>Rota hazir · 12 dk</span>
             </div>
             <div className="preview-stats">
               {previewStats.map((item) => (
@@ -143,12 +167,12 @@ export default function Home() {
 
       <section className="home-intel" id="vision">
         <div className="intel-copy">
-          <p className="eyebrow">Zyra web3 spatial design</p>
+          <p className="eyebrow">Spatial social layer</p>
           <h2 className="scroll-title">Harita artik sadece zemin degil, canli bir sosyal katman.</h2>
           <p>
             NOW Here; paylasimlari ekrandaki harita alaniyla, bolge filtreleriyle,
-            yorum akisiyle ve gercek hareket verisiyle birlestiren modern bir
-            konum deneyimi olarak tasarlandi.
+            yorum akisiyle, kamera deneyimiyle ve gercek hareket verisiyle birlestiren
+            modern bir konum deneyimi olarak tasarlandi.
           </p>
         </div>
         <div className="orbit-board" aria-hidden="true">
@@ -174,6 +198,21 @@ export default function Home() {
         ))}
       </section>
 
+      <section className="system-board" id="system">
+        <div>
+          <p className="eyebrow">Production stack</p>
+          <h2 className="scroll-title">Frontend, backend ve veri katmani ayrik ama tek deneyim gibi calisir.</h2>
+        </div>
+        <div className="system-grid">
+          {systemLayers.map((layer, index) => (
+            <span key={layer} style={{ "--delay": `${index * 70}ms` }}>
+              <strong>{String(index + 1).padStart(2, "0")}</strong>
+              {layer}
+            </span>
+          ))}
+        </div>
+      </section>
+
       <section className="home-flow" id="flow">
         <div>
           <p className="eyebrow">Akiskan kesif</p>
@@ -188,6 +227,14 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      <footer className="home-footer">
+        <div>
+          <p className="eyebrow">Ready</p>
+          <h2>Haritayi ac, konumu yakala, aniyi canli hale getir.</h2>
+        </div>
+        <Link to="/map" className="primary-link">Uygulamaya gir</Link>
+      </footer>
     </main>
   );
 }

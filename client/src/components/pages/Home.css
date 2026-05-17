@@ -1171,3 +1171,186 @@
     margin: 0 auto;
   }
 }
+
+/* Single-scroll + upgraded living background */
+.home-page {
+  min-height: 100dvh;
+  overflow-x: clip;
+  overflow-y: visible;
+  isolation: isolate;
+}
+
+.home-depth-wall {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 22%, rgba(68, 215, 182, 0.16), transparent 26%),
+    radial-gradient(circle at 82% 18%, rgba(255, 200, 87, 0.14), transparent 24%),
+    radial-gradient(circle at 50% 92%, rgba(64, 156, 255, 0.12), transparent 28%);
+}
+
+.home-depth-wall span {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(1px);
+  opacity: 0.58;
+}
+
+.home-depth-wall span:nth-child(1) {
+  width: 34vw;
+  height: 34vw;
+  left: -12vw;
+  top: 12vh;
+  border: 1px solid rgba(183, 255, 74, 0.16);
+  animation: depth-orb-one 18s ease-in-out infinite;
+}
+
+.home-depth-wall span:nth-child(2) {
+  width: 22vw;
+  height: 22vw;
+  right: 6vw;
+  top: 18vh;
+  background: radial-gradient(circle, rgba(255, 200, 87, 0.15), transparent 68%);
+  animation: depth-orb-two 15s ease-in-out infinite;
+}
+
+.home-depth-wall span:nth-child(3) {
+  width: 44vw;
+  height: 2px;
+  left: 18vw;
+  top: 72vh;
+  background: linear-gradient(90deg, transparent, rgba(64, 156, 255, 0.56), transparent);
+  transform: rotate(-14deg);
+  animation: depth-signal 9s linear infinite;
+}
+
+.home-depth-wall span:nth-child(4) {
+  width: 60vw;
+  height: 60vw;
+  right: -32vw;
+  bottom: -24vw;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  animation: depth-orb-one 26s linear infinite reverse;
+}
+
+.system-board,
+.home-footer {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
+.system-board {
+  margin-bottom: 54px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 26px;
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(360px, 1fr);
+  gap: 28px;
+  background:
+    linear-gradient(135deg, rgba(183, 255, 74, 0.08), rgba(64, 156, 255, 0.08)),
+    rgba(255, 255, 255, 0.055);
+  backdrop-filter: blur(14px);
+}
+
+.system-board h2,
+.home-footer h2 {
+  margin: 0;
+  font-size: clamp(30px, 3.4vw, 52px);
+  line-height: 1.05;
+}
+
+.system-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.system-grid span {
+  min-height: 118px;
+  border-radius: 8px;
+  padding: 14px;
+  display: grid;
+  align-content: space-between;
+  color: rgba(247, 245, 237, 0.72);
+  background:
+    radial-gradient(circle at 85% 15%, rgba(183, 255, 74, 0.16), transparent 40%),
+    rgba(7, 12, 15, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  animation: scroll-lift both;
+  animation-timeline: view();
+  animation-range: entry 0% cover 40%;
+  animation-delay: var(--delay);
+}
+
+.system-grid strong {
+  color: #ffc857;
+  font-size: 22px;
+}
+
+.home-footer {
+  margin-bottom: 0;
+  padding: 44px 0 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes depth-orb-one {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(4vw, -3vh, 0) rotate(16deg); }
+}
+
+@keyframes depth-orb-two {
+  0%, 100% { transform: scale(0.92); opacity: 0.42; }
+  50% { transform: scale(1.12); opacity: 0.74; }
+}
+
+@keyframes depth-signal {
+  from { transform: translateX(-18%) rotate(-14deg); }
+  to { transform: translateX(18%) rotate(-14deg); }
+}
+
+@media (max-width: 860px) {
+  .system-board {
+    grid-template-columns: 1fr;
+  }
+
+  .system-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-footer {
+    display: grid;
+  }
+}
+
+@media (max-width: 560px) {
+  .system-board,
+  .home-footer {
+    width: min(1180px, calc(100% - 28px));
+  }
+
+  .system-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-footer .primary-link {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-depth-wall,
+  .home-depth-wall span,
+  .system-grid span {
+    animation: none;
+  }
+}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Camera from "./Camera";
 import "./PostPanel.css";
 
@@ -13,21 +13,43 @@ const categories = [
   { value: "alisveris", label: "Alisveris" },
 ];
 
+const moods = [
+  { value: "calm", label: "Sakin" },
+  { value: "social", label: "Sosyal" },
+  { value: "focus", label: "Odak" },
+  { value: "energy", label: "Enerjik" },
+  { value: "view", label: "Manzara" },
+];
+
+function parseTags(value) {
+  return value
+    .split(",")
+    .map((tag) => tag.trim().replace(/^#/, ""))
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
 export default function PostPanel({ location, onSubmit, onClose }) {
   const [form, setForm] = useState({
     description: "",
     placeName: "Bulundugum nokta",
     category: "genel",
+    mood: "calm",
+    rating: 4,
+    tagsText: "",
   });
   const [image, setImage] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const tagPreview = useMemo(() => parseTags(form.tagsText), [form.tagsText]);
+
   function updateField(event) {
+    const { name, value } = event.target;
     setForm((current) => ({
       ...current,
-      [event.target.name]: event.target.value,
+      [name]: name === "rating" ? Number(value) : value,
     }));
   }
 
@@ -69,60 +91,68 @@ export default function PostPanel({ location, onSubmit, onClose }) {
         description: form.description.trim(),
         placeName: form.placeName.trim() || "Konum",
         category: form.category,
+        mood: form.mood,
+        rating: Number(form.rating) || 0,
+        tags: tagPreview,
         image,
       });
     } catch (err) {
-      setError(err.message || "Paylasim gonderilemedi.");
+      setError(err.message || "Paylasim kaydedilemedi.");
     } finally {
       setLoading(false);
     }
   }
 
-  if (showCamera) {
-    return (
-      <Camera
-        onCapture={(imageData) => {
-          setImage(imageData);
-          setShowCamera(false);
-        }}
-        onClose={() => setShowCamera(false)}
-      />
-    );
-  }
-
   return (
-    <div className="post-overlay" role="presentation" onMouseDown={onClose}>
-      <section
-        className="post-panel"
-        aria-labelledby="post-panel-title"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
+    <div className="post-overlay" role="dialog" aria-modal="true" aria-label="Yeni paylasim">
+      {showCamera && (
+        <Camera
+          onCapture={(captured) => {
+            setImage(captured);
+            setShowCamera(false);
+            setError("");
+          }}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
+
+      <section className="post-panel">
         <header className="post-panel-header">
           <div>
-            <p>Yeni paylasim</p>
-            <h2 id="post-panel-title">Bu noktayi isaretle</h2>
+            <p>Konumu isaretle</p>
+            <h2>Yeni ani ekle</h2>
           </div>
           <button type="button" className="icon-close" onClick={onClose} aria-label="Paneli kapat">
-            x
+            ×
           </button>
         </header>
 
-        {error && (
-          <p className="post-error" role="alert">
-            {error}
-          </p>
-        )}
+        {error && <p className="post-error">{error}</p>}
 
         <form className="post-form" onSubmit={handleSubmit}>
-          <label>
-            <span>Mekan adi</span>
-            <input
-              name="placeName"
-              value={form.placeName}
-              onChange={updateField}
-              maxLength={120}
-            />
-          </label>
+          <div className="post-smart-grid">
+            <label>
+              <span>Mekan adi</span>
+              <input
+                name="placeName"
+                value={form.placeName}
+                onChange={updateField}
+                placeholder="Ornek: Moda Sahil"
+                maxLength={120}
+              />
+            </label>
+
+            <label>
+              <span>Etiketler</span>
+              <input
+                name="tagsText"
+                value={form.tagsText}
+                onChange={updateField}
+                placeholder="kahve, manzara, sakin"
+                maxLength={120}
+              />
+            </label>
+          </div>
 
           <fieldset className="category-picker">
             <legend>Kategori</legend>
@@ -132,12 +162,7 @@ export default function PostPanel({ location, onSubmit, onClose }) {
                   type="button"
                   className={form.category === category.value ? "is-selected" : ""}
                   key={category.value}
-                  onClick={() =>
-                    setForm((current) => ({
-                      ...current,
-                      category: category.value,
-                    }))
-                  }
+                  onClick={() => setForm((current) => ({ ...current, category: category.value }))}
                 >
                   <span className={`category-dot category-${category.value}`} aria-hidden="true" />
                   {category.label}
@@ -146,13 +171,34 @@ export default function PostPanel({ location, onSubmit, onClose }) {
             </div>
           </fieldset>
 
+          <fieldset className="mood-picker">
+            <legend>Atmosfer</legend>
+            <div>
+              {moods.map((mood) => (
+                <button
+                  type="button"
+                  key={mood.value}
+                  className={form.mood === mood.value ? "is-selected" : ""}
+                  onClick={() => setForm((current) => ({ ...current, mood: mood.value }))}
+                >
+                  {mood.label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <label className="rating-control">
+            <span>Yer puani: {form.rating}/5</span>
+            <input name="rating" type="range" min="1" max="5" value={form.rating} onChange={updateField} />
+          </label>
+
           <label>
             <span>Not</span>
             <textarea
               name="description"
               value={form.description}
               onChange={updateField}
-              placeholder="Burasi nasil bir yer?"
+              placeholder="Burasi nasil bir yer? Kisa, net ve gercek bir izlenim yaz."
               maxLength={500}
               rows={4}
             />
@@ -163,6 +209,14 @@ export default function PostPanel({ location, onSubmit, onClose }) {
             </span>
             <span>{form.description.length} / 500</span>
           </div>
+
+          {!!tagPreview.length && (
+            <div className="tag-preview" aria-label="Etiket onizleme">
+              {tagPreview.map((tag) => (
+                <span key={tag}>#{tag}</span>
+              ))}
+            </div>
+          )}
 
           {image && (
             <figure className="image-preview">
@@ -175,7 +229,7 @@ export default function PostPanel({ location, onSubmit, onClose }) {
 
           <div className="media-actions">
             <button type="button" className="soft-button" onClick={() => setShowCamera(true)}>
-              Kamera
+              Kamera / On-Arka
             </button>
             <label className="soft-button file-button">
               Galeri

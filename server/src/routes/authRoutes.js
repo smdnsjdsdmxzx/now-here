@@ -19,6 +19,12 @@ const badgeCatalog = [
     test: (stats) => stats.postsCount >= 1,
   },
   {
+    id: "profil-mimari",
+    title: "Profil Mimari",
+    description: "Bio, sehir veya ilgi alanlarini tamamlayarak profilini genisletti.",
+    test: (stats) => stats.profileCompleteness >= 70,
+  },
+  {
     id: "rota-gezgini",
     title: "Rota Gezgini",
     description: "Toplam 1 km rota kaydetti.",
@@ -47,6 +53,12 @@ const badgeCatalog = [
     title: "Destekci",
     description: "10 paylasimi begendi.",
     test: (stats) => stats.likesGiven >= 10,
+  },
+  {
+    id: "etiket-ustasi",
+    title: "Etiket Ustasi",
+    description: "Paylasimlarinda toplam 8 etiket kullandi.",
+    test: (stats) => stats.tagsUsed >= 8,
   },
 ];
 
@@ -178,6 +190,12 @@ async function createVerifiedUser(data) {
       email: data.email,
       passwordHash,
       profilePhoto: data.profilePhoto || "",
+      bio: data.bio || "",
+      city: data.city || "",
+      website: data.website || "",
+      statusText: data.statusText || "Kesifte",
+      interests: Array.isArray(data.interests) ? data.interests : [],
+      profileTheme: data.profileTheme || "lime",
       emailVerified: true,
       distanceMeters: Number(data.distanceMeters) || 0,
     };
@@ -193,6 +211,12 @@ async function createVerifiedUser(data) {
     email: data.email,
     password: passwordHash,
     profilePhoto: data.profilePhoto || "",
+    bio: data.bio || "",
+    city: data.city || "",
+    website: data.website || "",
+    statusText: data.statusText || "Kesifte",
+    interests: Array.isArray(data.interests) ? data.interests : [],
+    profileTheme: data.profileTheme || "lime",
     emailVerified: true,
     distanceMeters: Number(data.distanceMeters) || 0,
   });
@@ -209,6 +233,9 @@ function normalizePost(post) {
     lng: Number(source.lng),
     placeName: source.placeName || "Konum",
     category: source.category || "genel",
+    mood: source.mood || "calm",
+    rating: Number(source.rating) || 0,
+    tags: Array.isArray(source.tags) ? source.tags : [],
     image: source.image || "",
     likes: Number(source.likes) || 0,
     likedBy: source.likedBy || [],
@@ -222,6 +249,31 @@ async function getAllPosts() {
   if (!usesDatabase()) return memoryPosts.map(normalizePost);
   const posts = await Post.find().sort({ createdAt: -1 });
   return posts.map(normalizePost);
+}
+
+function normalizeInterestList(value) {
+  const source = Array.isArray(value) ? value : String(value || "").split(",");
+  return Array.from(
+    new Set(
+      source
+        .map((item) => String(item).trim().replace(/^#/, "").toLowerCase())
+        .filter(Boolean)
+    )
+  ).slice(0, 8);
+}
+
+function calculateProfileCompleteness(user) {
+  const checks = [
+    user.firstName,
+    user.lastName,
+    user.avatarName,
+    user.profilePhoto,
+    user.bio,
+    user.city,
+    user.statusText,
+    user.interests?.length,
+  ];
+  return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
 
 function buildProfile(user, posts) {
@@ -238,17 +290,51 @@ function buildProfile(user, posts) {
       }))
   );
   const receivedLikes = myPosts.reduce((sum, post) => sum + (Number(post.likes) || 0), 0);
+  const tagsUsed = myPosts.reduce((sum, post) => sum + (post.tags || []).length, 0);
+  const categoryBreakdown = myPosts.reduce((acc, post) => {
+    const key = post.category || "genel";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const favoriteCategory = Object.entries(categoryBreakdown).sort((a, b) => b[1] - a[1])[0]?.[0] || "genel";
+  const profileCompleteness = calculateProfileCompleteness(currentUser);
+  const score = myPosts.length * 120 + receivedLikes * 45 + comments.length * 35 + likedPosts.length * 20 + Math.round(currentUser.distanceMeters / 20) + profileCompleteness;
+  const level = Math.max(1, Math.floor(score / 350) + 1);
   const stats = {
     postsCount: myPosts.length,
     receivedLikes,
     likesGiven: likedPosts.length,
     commentsGiven: comments.length,
     distanceMeters: currentUser.distanceMeters,
+    tagsUsed,
+    favoriteCategory,
+    profileCompleteness,
+    score,
+    level,
   };
+
+  const recentActivity = [
+    ...myPosts.slice(0, 5).map((post) => ({
+      id: `post-${post._id}`,
+      type: "post",
+      title: post.placeName,
+      text: post.description || "Fotografli paylasim",
+      createdAt: post.createdAt,
+    })),
+    ...comments.slice(0, 5).map((comment) => ({
+      id: `comment-${comment._id}`,
+      type: "comment",
+      title: comment.postTitle,
+      text: comment.text,
+      createdAt: comment.createdAt,
+    })),
+  ].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()).slice(0, 8);
 
   return {
     user: currentUser,
     stats,
+    categoryBreakdown,
+    recentActivity,
     badges: badgeCatalog.map((badge) => ({
       id: badge.id,
       title: badge.title,
@@ -385,6 +471,14 @@ router.put("/me", requireAuth, async (req, res) => {
       avatarName: String(req.body.avatarName || req.user.avatarName || "").trim(),
       displayName: String(req.body.avatarName || req.user.displayName || "").trim(),
       profilePhoto: req.body.profilePhoto ?? req.user.profilePhoto,
+      bio: String(req.body.bio ?? req.user.bio ?? "").trim().slice(0, 220),
+      city: String(req.body.city ?? req.user.city ?? "").trim().slice(0, 80),
+      website: String(req.body.website ?? req.user.website ?? "").trim().slice(0, 140),
+      statusText: String(req.body.statusText ?? req.user.statusText ?? "Kesifte").trim().slice(0, 80),
+      interests: normalizeInterestList(req.body.interests ?? req.user.interests),
+      profileTheme: ["lime", "aqua", "amber", "violet"].includes(req.body.profileTheme)
+        ? req.body.profileTheme
+        : req.user.profileTheme || "lime",
     };
 
     if (!updates.firstName || !updates.lastName || !updates.avatarName) {

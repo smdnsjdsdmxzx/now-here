@@ -1,104 +1,108 @@
 # NOW Here
 
-Konum bazli fotograf, not, yorum, begeni, profil ve rozet uygulamasi. React/Vite istemci, Express API ve MongoDB destekli calisir. MongoDB baglanamazsa API bellek ici yedek modda acilir.
+NOW Here; konum bazli post, harita akisi, rota, profil seviyesi, rozetler, kamera ile fotograf ve sosyal etkilesim ozellikleri iceren full-stack web uygulamasidir.
 
-## Ilk Kurulum
+## Mimari
 
-Zip'i actiktan sonra bir kere bagimliliklari kur:
+```txt
+client/  -> React + Vite frontend, Vercel icin
+server/  -> Express API, Render icin
+MongoDB  -> kullanici, post, yorum, profil verileri
+```
+
+## Yeni eklenen ana iyilestirmeler
+
+- Ana sayfada tek document scroll mantigi ve daha akici hareketli arka plan.
+- Mobil kamera ekraninda on kamera / arka kamera cevirme butonu.
+- Post sisteminde kategoriye ek olarak atmosfer, puan ve etiketler.
+- Profil sisteminde bio, sehir, website, durum, ilgi alanlari, tema, seviye, skor, profil dolulugu ve son aktivite.
+- Harita akisi icinde kategori ve metin/etiket filtresi.
+- Backend CORS yapisinda `CLIENT_ORIGINS` ile coklu frontend origin destegi.
+- Deploy dosyalari temizlendi: `.env`, `.git`, `node_modules` ve build ciktisi repoya alinmamali.
+
+## Local calistirma
+
+### 1. Backend
+
+```bash
+cd server
+npm install
+cp .env.example .env
+npm run dev
+```
+
+Backend varsayilan adresi:
+
+```txt
+http://localhost:5000
+```
+
+### 2. Frontend
 
 ```bash
 cd client
 npm install
-
-cd ../server
-npm install
-```
-
-Sonra proje kok klasorunden calistir:
-
-```bash
-cd ..
 npm run dev
 ```
 
-Istemci: http://localhost:5173  
-API: http://localhost:5000
+Frontend varsayilan adresi:
 
-## Yeni Ozellikler
+```txt
+http://localhost:5173
+```
 
-- Harita artik giris yapmadan acilmaz.
-- Sadece e-posta ile giris ve kayit yapilir.
-- Kayit sirasinda Brevo uzerinden e-posta dogrulama kodu gonderilir.
-- Dogrulama kodu sitede veya terminalde gosterilmez.
-- Profil sayfasi; paylasimlar, alinan begeniler, atilan begeniler, yorumlar ve rozetleri gosterir.
-- Kullanici profil fotografi, gercek ad, soyad ve avatar adi ekleyebilir.
-- Yorum ve begeniler kullanici hesabina baglanir.
-- Rota adimlari, rota bitirme ve mesafeyi profile isleme eklendi.
-- Arama backend proxy ile calisir; yazim hatasi ornegi olarak `burer king` sorgusu `burger king` sonucuna yonlenir.
-- Ayni bolgede cok paylasim varsa markerlar kume halinde gosterilir.
-- Kategori renkleri daha ayrik ve okunur hale getirildi.
-- Uygulama icin yeni amblem ve favicon eklendi.
+Client icin `.env`:
 
-## Brevo E-posta Dogrulama
+```env
+VITE_API_BASE_URL=http://localhost:5000
+```
 
-Backend artik yalnizca Brevo ile e-posta dogrulama kodu gonderir. Telefon ve SMS akislari kaldirildi. Ayarlari eklemek icin:
+Server icin `.env`:
+
+```env
+PORT=5000
+MONGO_URI=mongodb+srv://USER:PASSWORD@CLUSTER.mongodb.net/now-here
+JWT_SECRET=change-this-long-random-secret
+CLIENT_ORIGINS=http://localhost:5173
+```
+
+## Deploy
+
+### Render backend
+
+```txt
+Root Directory: server
+Build Command: npm install
+Start Command: npm start
+```
+
+Render env:
+
+```env
+MONGO_URI=...
+JWT_SECRET=...
+CLIENT_ORIGINS=https://your-vercel-app.vercel.app
+```
+
+### Vercel frontend
+
+```txt
+Root Directory: client
+Build Command: npm run build
+Output Directory: dist
+```
+
+Vercel env:
+
+```env
+VITE_API_BASE_URL=https://your-render-service.onrender.com
+```
+
+## Push komutlari
 
 ```bash
-cd server
-copy .env.example .env
+git add .
+git commit -m "Expand NOW Here UI UX and profile system"
+git push origin main --force
 ```
 
-Sonra `server/.env` icindeki alanlari doldur:
-
-```bash
-BREVO_API_KEY=xkeysib-xxxxxxxxxxxxxxxx
-BREVO_FROM_EMAIL=dogrulanmis-gonderici@example.com
-BREVO_FROM_NAME=NOW Here
-```
-
-Brevo API key veya dogrulanmis gonderici adresi eksikse kayit kodu uretilmez ve kullaniciya ayar hatasi gosterilir. Kod sadece e-posta ile gider; sitede veya terminalde acik sekilde yazdirilmaz.
-
-Brevo anahtarini kontrol etmek icin:
-
-```bash
-npm run brevo:check
-```
-
-Bu komut hem API key'i hem de `BREVO_FROM_EMAIL` adresinin Brevo'da aktif sender olarak tanimli olup olmadigini kontrol eder.
-
-Belirli bir aliciya giden son Brevo transactional loglarini kontrol etmek icin:
-
-```bash
-npm run brevo:logs -- alici@gmail.com
-```
-
-`Key not found` veya `Brevo API key dogrulanamadi` hatasi gelirse Brevo panelinde `SMTP & API > API Keys` bolumunden yeni bir API key olusturup `server/.env` icindeki `BREVO_API_KEY` alanina yapistir ve server'i yeniden baslat.
-
-## Komutlar
-
-```bash
-npm run dev
-npm run build
-npm run lint
-npm test
-npm run start
-```
-
-## 431 Header Hatasi Notu
-
-Eski surumde profil fotografi JWT token icine girebildigi icin tarayici cok buyuk `Authorization` header'i gonderebiliyordu. Bu surumde token sadece kullanici id'si tasir ve eski buyuk token uygulama acilisinda otomatik temizlenir.
-
-Tarayicida hala `431 Request Header Fields Too Large` gorursen sayfayi `Ctrl + F5` ile sert yenile. DevTools Console aciksa su komut da eski tarayici verisini temizler:
-
-```js
-localStorage.removeItem("token");
-localStorage.removeItem("user");
-location.reload();
-```
-
-## Ortam Degiskenleri
-
-- `server/.env` icinde MongoDB Atlas, JWT ve Brevo bilgileri bulunur.
-- Atlas baglantisi icin URI formatinda veritabani adi bulunmali: `/now-here?retryWrites=true&w=majority&appName=Cluster0`.
-- MongoDB baglanamazsa uygulama bellek ici demo modda calisir; bu durumda Atlas Database Access kullanicisini ve Network Access IP iznini kontrol et.
-- Eski surumde tarayicida yerel olarak olusan hesap varsa ve MongoDB'de bulunmuyorsa, giris sirasinda ayni e-posta/sifre ile otomatik olarak MongoDB'ye tasinir.
